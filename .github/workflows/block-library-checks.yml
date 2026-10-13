@@ -1,0 +1,23 @@
+name: Block library checks
+
+on:
+  push:
+    branches: [feature/reusable-block-library]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pure Python unit tests
+        run: python -m unittest discover -s tests -p test_block_store.py -v
+      - name: Python syntax
+        run: python -m compileall -q __init__.py nodes.py presets.py block_store.py block_library.py
+      - name: Browser JS syntax
+        run: |
+          node --input-type=module --check < web/prompt_preset_builder.js
+          node --input-type=module --check < web/block_library_ui.js

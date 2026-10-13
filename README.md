@@ -1,5 +1,7 @@
 # ComfyUI-PromptPresetBuilder
 
+> **Fork development:** An experimental [reusable block library](BLOCK_LIBRARY.md) is available on the `feature/reusable-block-library` branch. It adds categorized, linked instruction blocks without creating additional workflow nodes. Existing presets remain supported.
+
 ## Prompt Style Presets
 
 A separate node for plain positive/negative style pairs, under `utils/prompt`.

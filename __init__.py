@@ -1,4 +1,5 @@
 from . import presets  # noqa: F401  (registers the HTTP routes)
+from . import block_library  # noqa: F401 (registers reusable-block routes)
 from .nodes import NODE_CLASS_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS
 from .style_presets import PromptStylePresets
 
