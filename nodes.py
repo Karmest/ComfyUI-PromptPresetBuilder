@@ -21,6 +21,7 @@ class PromptPresetBuilder:
             },
             "optional": {
                 "selection_json": ("STRING", {"forceInput": True}),
+                "max_selected_blocks": ("INT", {"default": 5, "min": 1, "max": 12}),
             },
         }
 
@@ -31,10 +32,10 @@ class PromptPresetBuilder:
     DESCRIPTION = "Build a prompt from named elements. Supports {a|b|0.4::c} syntax and named presets."
 
     @classmethod
-    def IS_CHANGED(cls, preset_data, separator, seed, selection_json=None):
+    def IS_CHANGED(cls, preset_data, separator, seed, selection_json=None, max_selected_blocks=5):
         try:
             if selection_json is not None:
-                return json.dumps(selected_fingerprint(selection_json, load_blocks()), ensure_ascii=False)
+                return json.dumps(selected_fingerprint(selection_json, load_blocks(), limit=max_selected_blocks), ensure_ascii=False)
             rows = json.loads(preset_data) if preset_data.strip() else []
             if not isinstance(rows, list) or not any(isinstance(r, dict) and r.get("block_id") for r in rows):
                 return ""
@@ -42,7 +43,7 @@ class PromptPresetBuilder:
         except (ValueError, OSError):
             return "block-library-error"
 
-    def build(self, preset_data, separator, seed, selection_json=None):
+    def build(self, preset_data, separator, seed, selection_json=None, max_selected_blocks=5):
         try:
             rows = json.loads(preset_data) if preset_data.strip() else []
         except ValueError:
@@ -56,7 +57,7 @@ class PromptPresetBuilder:
         # Optional automated mode replaces manual rows for this execution.
         # A connected but invalid/empty evaluator result must fail visibly.
         if selection_json is not None:
-            selected = resolve_selection(selection_json, load_blocks())
+            selected = resolve_selection(selection_json, load_blocks(), limit=max_selected_blocks)
             parts = []
             for entry in selected:
                 text = resolve(entry["text"], rng).strip().strip(",").strip()

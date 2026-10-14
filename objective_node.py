@@ -16,8 +16,8 @@ class PromptObjectiveBuilder:
             "extra_context": ("STRING", {"default": "", "multiline": True}),
         }}
 
-    RETURN_TYPES = ("STRING", "STRING", "STRING")
-    RETURN_NAMES = ("system_prompt", "prompt", "final_prompt")
+    RETURN_TYPES = ("STRING", "STRING", "STRING", "INT")
+    RETURN_NAMES = ("system_prompt", "prompt", "final_prompt", "max_blocks")
     FUNCTION = "build"
     CATEGORY = "utils/prompt"
     DESCRIPTION = "Choose a goal for visual Qwen PE evaluation, not a final generation prompt."
@@ -47,4 +47,4 @@ class PromptObjectiveBuilder:
             + " Apply the selected instructions to the actual source image, "
               "preserving everything else. Do not add unrelated objects or change identities."
         )
-        return {"ui": {"text": [chosen["name"]]}, "result": (system, prompt, final_prompt)}
+        return {"ui": {"text": [chosen["name"]]}, "result": (system, prompt, final_prompt, max_blocks)}

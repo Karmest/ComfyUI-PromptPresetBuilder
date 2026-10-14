@@ -52,6 +52,31 @@ class SelectionTests(unittest.TestCase):
             with self.subTest(raw=raw), self.assertRaises(ValueError):
                 selection.resolve_selection(raw, BLOCKS)
 
+    def test_real_failure_pattern_first_json_then_repetitive_suffix(self):
+        # Regression for a PE run that generated a correct initial JSON but
+        # continued repeating text until 8192/8192 tokens were exhausted.
+        clean = json.dumps({"selected_block_ids": ["c", "a", "b"], "image_type": "photo with people"})
+        noisy = clean + (' "the paragraph above is the rewrite." ' * 100)
+        chosen = selection.resolve_selection(noisy, BLOCKS, limit=2)
+        self.assertEqual([entry["id"] for entry in chosen], ["c", "a"])
+
+    def test_multiple_json_objects_are_ambiguous(self):
+        raw = '{"selected_block_ids":["a"]} {"selected_block_ids":["b"]}'
+        with self.assertRaisesRegex(ValueError, "multiple JSON"):
+            selection.decode_plan(raw)
+
+    def test_overselected_blocks_preserve_ranked_priority(self):
+        raw = '{"selected_block_ids":["c","b","a"]}'
+        self.assertEqual(
+            [x["id"] for x in selection.resolve_selection(raw, BLOCKS, limit=2)],
+            ["c", "b"]
+        )
+
+    def test_extra_trailing_text_without_initial_json_is_rejected(self):
+        raw = 'Text first. {"selected_block_ids":["a"]}'
+        with self.assertRaises(ValueError):
+            selection.decode_plan(raw)
+
     def test_library_edit_changes_fingerprint(self):
         raw = '{"selected_block_ids":["a"]}'
         before = selection.selected_fingerprint(raw, BLOCKS)
@@ -104,6 +129,17 @@ class NodeContractTests(unittest.TestCase):
         finally:
             nodes.load_blocks = original
 
+    def test_builder_respects_user_selected_block_limit(self):
+        original = nodes.load_blocks
+        nodes.load_blocks = lambda: BLOCKS
+        try:
+            raw = '{"selected_block_ids":["c","a","b"]} trailing repetition'
+            builder = nodes.PromptPresetBuilder()
+            result = builder.build("[]", r"\n\n", 0, raw, max_selected_blocks=2)
+            self.assertEqual(result["result"][0], "Reduce digital noise\n\nNatural light")
+        finally:
+            nodes.load_blocks = original
+
     def test_connected_invalid_selector_fails(self):
         original = nodes.load_blocks
         nodes.load_blocks = lambda: BLOCKS
@@ -121,10 +157,11 @@ class NodeContractTests(unittest.TestCase):
         objective_node.load_objectives = lambda: store.DEFAULT_OBJECTIVES
         try:
             output = objective_node.PromptObjectiveBuilder().build("goal.people", 4, "")
-            self.assertEqual(len(output["result"]), 3)
+            self.assertEqual(len(output["result"]), 4)
             self.assertIn('"selected_block_ids"', output["result"][0])
             self.assertIn("Mejorar fotos con personas", output["result"][1])
             self.assertIn("Edit <image1>", output["result"][2])
+            self.assertEqual(output["result"][3], 4)
         finally:
             objective_node.load_blocks = saved_load_blocks
             objective_node.load_objectives = saved_load_objectives
