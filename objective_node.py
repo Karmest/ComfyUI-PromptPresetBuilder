@@ -43,8 +43,8 @@ class PromptObjectiveBuilder:
         system, prompt = make_evaluator_prompts(chosen, load_blocks(), max_blocks, extra_context)
         final_prompt = (
             "Edit <image1> to achieve the following result: "
-            + chosen["name"] + ". " + chosen["instruction"]
-            + " Apply only improvements justified by the input image, "
+            + chosen["name"] + ". " + chosen["description"]
+            + " Apply the selected instructions to the actual source image, "
               "preserving everything else. Do not add unrelated objects or change identities."
         )
         return {"ui": {"text": [chosen["name"]]}, "result": (system, prompt, final_prompt)}
