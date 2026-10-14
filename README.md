@@ -1,4 +1,6 @@
 # ComfyUI-PromptPresetBuilder
+> **Experimental objective-driven planner:** The `feature/objective-driven-planner` branch adds a separate **Objetivos - Prompt Builder** node, and an optional `selection_json` input on **Bloques - Prompt Builder**. [See wiring, limitations and tests](OBJECTIVE_PLANNER.md). Manual presets remain compatible.
+
 
 > **Fork development:** An experimental [reusable block library](BLOCK_LIBRARY.md) is available on the `feature/reusable-block-library` branch. It adds categorized, linked instruction blocks without creating additional workflow nodes. Existing presets remain supported.
 

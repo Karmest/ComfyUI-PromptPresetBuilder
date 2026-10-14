@@ -2,7 +2,7 @@ name: Block library checks
 
 on:
   push:
-    branches: [feature/reusable-block-library]
+    branches: [feature/reusable-block-library, feature/objective-driven-planner]
   pull_request:
 
 jobs:
@@ -15,9 +15,12 @@ jobs:
           python-version: "3.12"
       - name: Pure Python unit tests
         run: python -m unittest discover -s tests -p test_block_store.py -v
+      - name: Objective planner unit and integration tests
+        run: python -m unittest discover -s tests -p test_objective_planning.py -v
       - name: Python syntax
-        run: python -m compileall -q __init__.py nodes.py presets.py block_store.py block_library.py
+        run: python -m compileall -q __init__.py nodes.py presets.py block_store.py block_library.py objective_store.py objectives_api.py objective_engine.py objective_node.py selection_engine.py
       - name: Browser JS syntax
         run: |
           node --input-type=module --check < web/prompt_preset_builder.js
           node --input-type=module --check < web/block_library_ui.js
+          node --input-type=module --check < web/prompt_objective_builder.js
