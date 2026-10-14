@@ -121,9 +121,10 @@ class NodeContractTests(unittest.TestCase):
         objective_node.load_objectives = lambda: store.DEFAULT_OBJECTIVES
         try:
             output = objective_node.PromptObjectiveBuilder().build("goal.people", 4, "")
-            self.assertEqual(len(output["result"]), 2)
+            self.assertEqual(len(output["result"]), 3)
             self.assertIn('"selected_block_ids"', output["result"][0])
             self.assertIn("Mejorar fotos con personas", output["result"][1])
+            self.assertIn("Edit <image1>", output["result"][2])
         finally:
             objective_node.load_blocks = saved_load_blocks
             objective_node.load_objectives = saved_load_objectives

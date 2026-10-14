@@ -13,9 +13,12 @@ Nueva rama: feature/objective-driven-planner. El flujo manual sigue disponible.
 2. Objetivos.prompt -> EvaluadorPE.prompt
 3. Imagen original -> EvaluadorPE.image_1. Usa loader i2i y preset i2i.
 4. EvaluadorPE.positive_prompt -> Bloques.selection_json
-5. Bloques.prompt -> GeneradorPE.extra_instructions (en tu versión local modificada del PE), o a GeneradorPE.prompt con una instrucción principal adecuada.
-6. Imagen original -> GeneradorPE.image_1. Usa loader i2i y preset i2i.
-7. GeneradorPE.positive_prompt -> text encoder / cadena de edición Qwen habitual.
+5. Objetivos.final_prompt -> GeneradorPE.prompt
+6. Bloques.prompt -> GeneradorPE.extra_instructions (en tu versión local modificada del PE).
+7. Imagen original -> GeneradorPE.image_1. Usa loader i2i y preset i2i.
+8. GeneradorPE.positive_prompt -> text encoder / cadena de edición Qwen habitual.
+
+Si tu Prompt Enhancer no tiene la entrada extra_instructions, necesitas un nodo de concatenación STRING para unir Objetivos.final_prompt y Bloques.prompt y conectar el texto resultante a GeneradorPE.prompt.
 
 El mismo loader PE i2i puede alimentar ambos Enhancers, pero hay dos inferencias consecutivas.
 

@@ -16,8 +16,8 @@ class PromptObjectiveBuilder:
             "extra_context": ("STRING", {"default": "", "multiline": True}),
         }}
 
-    RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("system_prompt", "prompt")
+    RETURN_TYPES = ("STRING", "STRING", "STRING")
+    RETURN_NAMES = ("system_prompt", "prompt", "final_prompt")
     FUNCTION = "build"
     CATEGORY = "utils/prompt"
     DESCRIPTION = "Choose a goal for visual Qwen PE evaluation, not a final generation prompt."
@@ -41,4 +41,10 @@ class PromptObjectiveBuilder:
         if chosen is None:
             raise ValueError(f"Unknown objective: {objective_id}; select one in Objective Builder")
         system, prompt = make_evaluator_prompts(chosen, load_blocks(), max_blocks, extra_context)
-        return {"ui": {"text": [chosen["name"]]}, "result": (system, prompt)}
+        final_prompt = (
+            "Edit <image1> to achieve the following result: "
+            + chosen["name"] + ". " + chosen["instruction"]
+            + " Apply only improvements justified by the input image, "
+              "preserving everything else. Do not add unrelated objects or change identities."
+        )
+        return {"ui": {"text": [chosen["name"]]}, "result": (system, prompt, final_prompt)}
