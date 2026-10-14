@@ -1,5 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
+import { openBlockLibrary, fetchBlockLibrary } from "./block_library_ui.js";
 
 const NODE_NAME = "PromptPresetBuilder";
 
@@ -515,6 +516,7 @@ function setupNode(node) {
     hideWidget(dataWidget);
 
     node.ppbRows = [];
+    let blockIndex = new Map();
     // the row set we know is already stored (see markSaved / isDirty below)
     let savedSnapshot = "[]";
 
@@ -556,10 +558,17 @@ function setupNode(node) {
     });
 
     const btnAdd = mkButton("+ Add element");
+    const btnLibrary = mkButton("Library...");
+    btnLibrary.title = "Browse and edit reusable instruction blocks";
+    const actionsEl = document.createElement("div");
+    actionsEl.className = "ppb-bar";
+    btnAdd.style.flex = "1";
+    btnLibrary.style.flex = "1";
+    actionsEl.append(btnAdd, btnLibrary);
     const preview = document.createElement("div");
     preview.className = "ppb-preview";
 
-    root.append(bar, bar2, rowsEl, btnAdd, preview);
+    root.append(bar, bar2, rowsEl, actionsEl, preview);
 
     function minBodyHeight() {
         const rows = node.ppbRows;
@@ -653,6 +662,7 @@ function setupNode(node) {
     function renderRows() {
         rowsEl.innerHTML = "";
         node.ppbRows.forEach((row, idx) => {
+            const linked = row.block_id ? blockIndex.get(row.block_id) : null;
             const el = document.createElement("div");
             el.className = "ppb-row";
 
@@ -667,7 +677,9 @@ function setupNode(node) {
             label.type = "text";
             label.className = "ppb-label";
             label.placeholder = "label";
-            label.value = row.label || "";
+            label.value = linked?.name ?? row.label ?? "";
+            label.readOnly = Boolean(row.block_id);
+            label.title = row.block_id ? "Linked block (edit it in Library, or detach)" : "";
             isolate(label);
             label.addEventListener("input", () => { row.label = label.value; sync(); });
 
@@ -675,8 +687,11 @@ function setupNode(node) {
             const text = built.el;
             text.classList.add("ppb-text");
             text.placeholder = PROMPT_PLACEHOLDER;
-            text.value = row.text || "";
-            text.title = row.text || "";
+            text.value = linked?.text ?? row.text ?? "";
+            text.readOnly = Boolean(row.block_id);
+            text.title = row.block_id && !linked
+                ? "Linked block missing; using saved snapshot. Detach to edit."
+                : (linked?.text ?? row.text ?? "");
             isolate(text);
             text.addEventListener("input", () => {
                 row.text = text.value;
@@ -699,7 +714,7 @@ function setupNode(node) {
                 if (!(row.h > 0)) setH(ROW_H);
                 // safety net: pick up anything written into the box by another
                 // extension (autocomplete insertions) that we might have missed
-                if (row.text !== text.value) {
+                if (!row.block_id && row.text !== text.value) {
                     row.text = text.value;
                     text.title = text.value;
                     sync();
@@ -742,7 +757,33 @@ function setupNode(node) {
                 renderRows(); sync(); resize(true);
             });
 
-            el.append(chk, label, text, up, down, del);
+            if (!row.block_id) {
+                const publish = mkButton("☆");
+                publish.className = "ppb-mini";
+                publish.title = "Save this element as a reusable library block";
+                publish.addEventListener("click", () => showLibrary({
+                    draft: { name: row.label || "", text: row.text || "", category: "" },
+                    onDraftSaved(block) {
+                        row.block_id = block.id;
+                        row.label = block.name;
+                        row.text = block.text;
+                        blockIndex.set(block.id, block);
+                        renderRows(); sync();
+                    },
+                }));
+                el.append(chk, label, text, publish, up, down, del);
+            } else {
+                const detach = mkButton("↗");
+                detach.className = "ppb-mini";
+                detach.title = "Detach this block; keep current text as an editable copy";
+                detach.addEventListener("click", () => {
+                    row.label = linked?.name ?? row.label ?? "";
+                    row.text = linked?.text ?? row.text ?? "";
+                    delete row.block_id;
+                    renderRows(); sync();
+                });
+                el.append(chk, label, text, detach, up, down, del);
+            }
             rowsEl.appendChild(el);
         });
     }
@@ -765,6 +806,33 @@ function setupNode(node) {
         node.ppbRows.push({ label: "", text: "", enabled: true });
         renderRows(); sync(); resize();
     });
+
+    node.ppbRefreshBlocks = async () => {
+        try {
+            const blocks = await fetchBlockLibrary();
+            blockIndex = new Map(blocks.map((block) => [block.id, block]));
+            renderRows();
+        } catch (e) {
+            console.error("[PromptPresetBuilder] cannot refresh block library", e);
+        }
+    };
+    function showLibrary(options = {}) {
+        openBlockLibrary({
+            ...options,
+        onAdd(block) {
+            node.ppbRows.push({
+                label: block.name, text: block.text,
+                enabled: true, block_id: block.id,
+            });
+            blockIndex.set(block.id, block);
+            renderRows(); sync(); resize();
+        },
+        onUpdated() {
+            for (const n of app.graph?.nodes ?? []) n.ppbRefreshBlocks?.();
+        },
+        });
+    }
+    btnLibrary.addEventListener("click", () => showLibrary());
 
     // --- preset io --------------------------------------------------------
     // { label: [presetName, ...] }; presets under different labels are unrelated
@@ -896,6 +964,7 @@ function setupNode(node) {
 
     refreshPresetList();
     node.ppbLoadFromWidget();
+    node.ppbRefreshBlocks();
     node.size = [420, node.computeSize()[1]];
 }
 

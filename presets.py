@@ -107,6 +107,10 @@ def _normalize_rows(rows):
             "text": str(r.get("text", "")),
             "enabled": bool(r.get("enabled", True)),
         }
+        # Stable reference to a reusable block. Legacy inline rows remain valid.
+        block_id = r.get("block_id")
+        if isinstance(block_id, str) and block_id.strip():
+            row["block_id"] = block_id.strip()
         # optional: the height the user dragged the prompt box to (UI only)
         try:
             h = float(r.get("h"))
